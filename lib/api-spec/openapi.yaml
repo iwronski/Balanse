@@ -1,0 +1,201 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+paths:
+  /karb/parse-entry:
+    post:
+      operationId: parseEntry
+      tags: [karb]
+      summary: Parse a Norwegian journal note into editable draft entries
+      description: No history is supplied or stored. Food carbohydrates may be estimated; insulin, glucose and exercise are recorded only when explicitly reported, never from intentions or questions. All drafts require user review.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [text, referenceTime, timezone]
+              properties:
+                text: {type: string, minLength: 1, maxLength: 8000}
+                referenceTime: {type: string, format: date-time}
+                timezone:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: IANA time zone, for example Europe/Oslo. Relative dates and local clock times use this zone.
+      responses:
+        "200":
+          description: Editable drafts; missing quantities and unknown choices are null, never guessed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseEntryResult"
+        "400":
+          description: Invalid text, ISO reference time or IANA time zone
+        "429":
+          description: Rate or concurrency limit exceeded
+        "502":
+          description: Parsing failed; sensitive upstream details are not returned
+  /karb/analyze:
+    post:
+      operationId: analyzeMeal
+      tags: [karb]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notes]
+              properties:
+                imageBase64: {type: string}
+                notes: {type: string}
+                confirmedWeightGrams: {type: number}
+                previousAnalysis:
+                  $ref: "#/components/schemas/MealAnalysis"
+      responses:
+        "200":
+          description: Meal estimate requiring user review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealAnalysis"
+  /karb/transcribe:
+    post:
+      operationId: transcribeMealNote
+      tags: [karb]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audioBase64, mimeType]
+              properties:
+                audioBase64: {type: string}
+                mimeType: {type: string}
+      responses:
+        "200":
+          description: Transcribed Norwegian note
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [text]
+                properties:
+                  text: {type: string}
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+components:
+  schemas:
+    ParsedEntryIngredient:
+      type: object
+      additionalProperties: false
+      required: [name, grams, carbsPer100g, assumption]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 160}
+        grams:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 5000
+          description: Edible grams; null when no reasonable food portion estimate is possible.
+        carbsPer100g:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 100
+          description: Available carbohydrate excluding fibre; null if unknown. Compute carbs as grams times carbsPer100g divided by 100, never from an AI total.
+        assumption: {type: string, maxLength: 1000}
+    ParsedEntry:
+      type: object
+      additionalProperties: false
+      required: [type, timestamp, title, note]
+      properties:
+        type: {type: string, enum: [meal, insulin, glucose, exercise]}
+        timestamp: {type: string, format: date-time}
+        title: {type: string, minLength: 1, maxLength: 160}
+        note: {type: string, maxLength: 2000}
+        value:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 10000
+          description: Explicitly reported insulin units, glucose mmol/L or exercise minutes. Null when missing; omitted for meals. Never inferred or calculated.
+        insulinKind:
+          type: [string, "null"]
+          enum: [hurtig, langtid, annet, null]
+          description: Only for insulin; null unless explicitly known. User must choose if unknown.
+        intensity:
+          type: [string, "null"]
+          enum: [lett, moderat, hard, null]
+          description: Only for exercise; null unless explicitly reported.
+        ingredients:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/ParsedEntryIngredient"
+    ParseEntryResult:
+      type: object
+      additionalProperties: false
+      required: [entries, questions]
+      properties:
+        entries:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/ParsedEntry"
+        questions:
+          type: array
+          maxItems: 30
+          items: {type: string, minLength: 1, maxLength: 500}
+    MealIngredient:
+      type: object
+      required: [name, grams, carbsPer100g, carbs, assumption]
+      properties:
+        name: {type: string}
+        grams: {type: number}
+        carbsPer100g: {type: number}
+        carbs: {type: number}
+        assumption: {type: string}
+    MealAnalysis:
+      type: object
+      required: [title, ingredients, totalCarbs, uncertainty, warnings]
+      properties:
+        title: {type: string}
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/MealIngredient"
+        totalCarbs: {type: number}
+        detectedWeightGrams: {type: number}
+        uncertainty: {type: string}
+        warnings:
+          type: array
+          items: {type: string}
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+

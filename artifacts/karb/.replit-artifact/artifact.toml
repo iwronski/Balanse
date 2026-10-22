@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "Balanse"
+description = "Norsk mobilapp for karbohydratestimering fra måltidsbilder, korrigering med tekst og tale, vektbekreftelse og lokal tidslinje for diabetes type 1."
+version = "1.0.0"
+id = "artifacts/karb"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 25038
+
+[services.development]
+run = "pnpm --filter @workspace/karb run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/karb", "run", "build:web" ]
+run = [ "pnpm", "--filter", "@workspace/karb", "run", "serve:web" ]
+
+[services.env]
+PORT = "25038"
+BASE_PATH = "/"

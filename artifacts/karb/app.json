@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Balanse",
+    "slug": "karb",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "karb",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {},
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Balanse bruker mikrofonen når du vil registrere data med stemmen."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Balanse trenger tilgang til bildene dine for å analysere et måltid du velger.",
+          "cameraPermission": "Balanse bruker kameraet for å fotografere måltidet ditt."
+        }
+      ],
+      "expo-sharing"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
