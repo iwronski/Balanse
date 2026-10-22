@@ -56,3 +56,7 @@ Thumbs.db
 *.pem
 *.key
 /generated-artifacts/
+
+# carb benchmark downloads and results
+scripts/carb-bench/data/
+scripts/carb-bench/results/
